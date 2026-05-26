@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MEMORY STEPS Trainer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-2: #1f2937;
+      --text: #f4f7fb;
+      --muted: #9aa7b7;
+      --line: rgba(255,255,255,.12);
+      --safe: #63e6be;
+      --safe-strong: #12b886;
+      --danger: #ff6b6b;
+      --warn: #ffd43b;
+      --cell: min(9svh, 9dvh, 62px, 18vw);
+      --gap: min(0.75svh, 8px);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(circle at top, #172033 0%, var(--bg) 52%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    .app {
+      width: min(100%, 760px);
+      height: min(100dvh, 820px);
+      display: grid;
+      grid-template-columns: minmax(128px, 1fr) auto minmax(128px, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+
+    .side {
+      min-width: 0;
+      background: rgba(22, 27, 34, .82);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.28);
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(18px, 3.5vw, 28px);
+      letter-spacing: .02em;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0 0 14px;
+    }
+
+    .status {
+      min-height: 86px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.045);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .status strong { color: var(--safe); }
+    .status .bad { color: var(--danger); font-weight: 800; }
+    .status .warn { color: var(--warn); font-weight: 800; }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #08111f;
+      background: var(--safe);
+      font-weight: 800;
+      letter-spacing: .02em;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(18,184,134,.18);
+      transition: transform .08s ease, filter .12s ease, opacity .12s ease;
+    }
+
+    button:hover { filter: brightness(1.04); }
+    button:active { transform: translateY(1px) scale(.99); }
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+    button:disabled {
+      opacity: .48;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .option-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.035);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    input { accent-color: var(--safe); }
+
+    .board-wrap {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      justify-items: center;
+      gap: 8px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .goal, .start {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .18em;
+      font-weight: 800;
+      user-select: none;
+    }
+
+    .board {
+      display: grid;
+      grid-template-rows: repeat(10, var(--cell));
+      gap: var(--gap);
+      align-content: center;
+      justify-content: center;
+      padding: 10px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 60px rgba(0,0,0,.35);
+      touch-action: manipulation;
+      max-height: 100%;
+    }
+
+    .cell {
+      width: var(--cell);
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.16);
+      background: linear-gradient(145deg, #222b3a, #111827);
+      color: rgba(255,255,255,.68);
+      display: grid;
+      place-items: center;
+      font-size: clamp(11px, 2.6vw, 15px);
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+
+    .cell::after {
+      content: "";
+      position: absolute;
+      inset: 8%;
+      border-radius: calc(var(--radius) - 4px);
+      background: radial-gradient(circle, rgba(255,255,255,.16), transparent 70%);
+      opacity: .35;
+    }
+
+    .cell:hover { transform: translateY(-1px); }
+    .cell.lit {
+      background: radial-gradient(circle at 38% 30%, #d3fff1 0%, var(--safe) 28%, var(--safe-strong) 100%);
+      color: #02251b;
+      border-color: rgba(255,255,255,.55);
+      box-shadow: 0 0 22px rgba(99,230,190,.65), inset 0 0 12px rgba(255,255,255,.35);
+    }
+    .cell.correct {
+      background: linear-gradient(145deg, #099268, #087f5b);
+      color: white;
+      border-color: rgba(99,230,190,.8);
+      box-shadow: 0 0 16px rgba(99,230,190,.35);
+    }
+    .cell.wrong {
+      background: linear-gradient(145deg, #fa5252, #c92a2a);
+      color: white;
+      border-color: rgba(255,255,255,.45);
+      box-shadow: 0 0 16px rgba(255,107,107,.45);
+    }
+    .cell.next {
+      outline: 3px solid rgba(255,212,59,.9);
+      outline-offset: 3px;
+    }
+    .cell.disabled {
+      cursor: default;
+      pointer-events: none;
+      opacity: .9;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255,255,255,.035);
+    }
+
+    .metric b {
+      display: block;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .pattern-list {
+      display: grid;
+      gap: 6px;
+      margin: 12px 0 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pattern-list div {
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    .tiny {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 720px) {
+      body { overflow: auto; align-items: flex-start; }
+      .app {
+        height: auto;
+        min-height: 100dvh;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "left board"
+          "right board";
+        align-items: start;
+        padding: 8px 0;
+      }
+      .side { padding: 12px; border-radius: 18px; }
+      .left { grid-area: left; }
+      .right { grid-area: right; }
+      .board-wrap { grid-area: board; position: sticky; top: 8px; height: calc(100dvh - 16px); }
+      h1 { font-size: 18px; }
+      .sub, .status { font-size: 12px; }
+      .metrics { grid-template-columns: 1fr; }
+      .pattern-list { display: none; }
+    }
+
+    @media (max-width: 430px) {
+      :root {
+        --cell: min(8.1svh, 8.1dvh, 48px, 17vw);
+        --gap: 5px;
+        --radius: 10px;
+      }
+      .app { gap: 8px; }
+      .side { max-width: calc(100vw - var(--cell) - 52px); }
+      button { padding: 10px 9px; font-size: 12px; border-radius: 12px; }
+      .option-row { gap: 5px; }
+      label { padding: 6px 7px; }
+      .status { min-height: 78px; }
+      .board { padding: 7px; border-radius: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="side left">
+      <h1>MEMORY STEPS</h1>
+      <p class="sub">5個だけ1秒光ります。消えたあと、START側からGOAL側へ安全パネルを順に選んでください。</p>
+
+      <div id="status" class="status">「START」を押すと、5パターンからランダムに1つ出題します。</div>
+
+      <div class="controls">
+        <button id="startBtn">START / 次の問題</button>
+        <button id="showAgainBtn" class="secondary" disabled>もう1回だけ見る</button>
+        <button id="revealBtn" class="secondary" disabled>答えを見る</button>
+      </div>
+
+      <div class="option-row">
+        <label><input type="checkbox" id="strictMode" checked> 1ミス終了</label>
+      </div>
+    </section>
+
+    <section class="board-wrap" aria-label="Memory Steps board">
+      <div class="goal">GOAL</div>
+      <div id="board" class="board"></div>
+      <div class="start">START</div>
+    </section>
+
+    <section class="side right">
+      <div class="metrics">
+        <div class="metric"><b id="clearCount">0</b><span>クリア</span></div>
+        <div class="metric"><b id="failCount">0</b><span>失敗</span></div>
+        <div class="metric"><b id="streakCount">0</b><span>連続クリア</span></div>
+        <div class="metric"><b id="stepCount">0/5</b><span>現在の進行</span></div>
+      </div>
+
+      <div class="pattern-list" aria-label="known patterns">
+        <div>oxoxxooxxo</div>
+        <div>xooxxoxxoo</div>
+        <div>xooxxxooxo</div>
+        <div>xxoooxxxoo</div>
+        <div>oxxoxxooox</div>
+      </div>
+
+      <p class="tiny">
+        パターン文字列は左がSTART、右がGOAL。<br>
+        画面上では左端を下側START、右端を上側GOALに対応させています。
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const patterns = [
+      "oxoxxooxxo",
+      "xooxxoxxoo",
+      "xooxxxooxo",
+      "xxoooxxxoo",
+      "oxxoxxooox"
+    ];
+
+    const board = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+    const showAgainBtn = document.getElementById("showAgainBtn");
+    const revealBtn = document.getElementById("revealBtn");
+    const strictMode = document.getElementById("strictMode");
+    const clearCountEl = document.getElementById("clearCount");
+    const failCountEl = document.getElementById("failCount");
+    const streakCountEl = document.getElementById("streakCount");
+    const stepCountEl = document.getElementById("stepCount");
+
+    let cells = [];
+    let currentPattern = "";
+    let safePatternPositionsStartToGoal = [];
+    let route = [];
+    let routeCursor = 0;
+    let accepting = false;
+    let showing = false;
+    let clearCount = 0;
+    let failCount = 0;
+    let streakCount = 0;
+    let canShowAgain = false;
+
+    function buildBoard() {
+      board.innerHTML = "";
+      cells = [];
+      for (let i = 0; i < 10; i++) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cell disabled";
+        cell.dataset.index = String(i);
+        cell.setAttribute("aria-label", `panel ${i + 1}`);
+        cell.textContent = "";
+        cell.addEventListener("click", () => choosePanel(i));
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+
+    function setStatus(html) {
+      statusEl.innerHTML = html;
+    }
+
+    function updateMetrics() {
+      clearCountEl.textContent = clearCount;
+      failCountEl.textContent = failCount;
+      streakCountEl.textContent = streakCount;
+      stepCountEl.textContent = `${Math.min(routeCursor, 5)}/5`;
+    }
+
+    function visualIndexToPatternIndex(visualIndex) {
+      // 画面上は上がGOAL・下がSTART。
+      // パターン文字列は左がSTART・右がGOALなので、上下を反転して対応させる。
+      return 9 - visualIndex;
+    }
+
+    function patternIndexToVisualIndex(patternIndex) {
+      return 9 - patternIndex;
+    }
+
+    function resetCells() {
+      cells.forEach((cell, i) => {
+        cell.className = "cell";
+        cell.textContent = "";
+        cell.disabled = false;
+      });
+    }
+
+    function disableCells() {
+      cells.forEach(cell => {
+        cell.classList.add("disabled");
+        cell.disabled = true;
+      });
+    }
+
+    function enableCells() {
+      cells.forEach(cell => {
+        cell.classList.remove("disabled");
+        cell.disabled = false;
+      });
+    }
+
+    function flashPattern() {
+      showing = true;
+      accepting = false;
+      showAgainBtn.disabled = true;
+      revealBtn.disabled = true;
+      disableCells();
+      resetCells();
+      cells.forEach((cell, i) => {
+        if (currentPattern[visualIndexToPatternIndex(i)] === "o") cell.classList.add("lit");
+      });
+      setStatus("<strong>記憶タイム。</strong><br>1秒だけ安全パネルが光ります。形で覚える。");
+
+      setTimeout(() => {
+        cells.forEach(cell => cell.classList.remove("lit"));
+        showing = false;
+        accepting = true;
+        enableCells();
+        markNext();
+        showAgainBtn.disabled = !canShowAgain;
+        revealBtn.disabled = false;
+        setStatus(`消えました。<br><strong>${routeCursor + 1}枚目</strong>をSTART側から選んでください。`);
+      }, 1000);
+    }
+
+    function markNext() {
+      // 本番練習用：次に選ぶべき正解パネルは表示しない。
+      // 正解/不正解の判定だけを行う。
+      cells.forEach(cell => cell.classList.remove("next"));
+    }
+
+    function startRound() {
+      currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+      safePatternPositionsStartToGoal = [...currentPattern].map((v, i) => v === "o" ? i : null).filter(v => v !== null);
+      route = safePatternPositionsStartToGoal.map(patternIndexToVisualIndex); // START(left) -> GOAL(right), rendered bottom -> top
+      routeCursor = 0;
+      accepting = false;
+      canShowAgain = true;
+      resetCells();
+      updateMetrics();
+      flashPattern();
+    }
+
+    function choosePanel(index) {
+      if (!accepting || showing) return;
+      const expected = route[routeCursor];
+
+      if (index === expected) {
+        cells[index].classList.remove("next");
+        cells[index].classList.add("correct");
+        cells[index].disabled = true;
+        cells[index].classList.add("disabled");
+        routeCursor += 1;
+        updateMetrics();
+
+        if (routeCursor >= route.length) {
+          accepting = false;
+          disableCells();
+          clearCount += 1;
+          streakCount += 1;
+          updateMetrics();
+          setStatus("<strong>GOAL!</strong><br>5枚すべて正解。次の問題で連続クリアを伸ばしましょう。");
+          return;
+        }
+
+        markNext();
+        setStatus(`正解。<br>次は<strong>${routeCursor + 1}枚目</strong>。迷ったら上からではなく、STARTからの道順で思い出す。`);
+      } else {
+        cells[index].classList.add("wrong");
+        if (strictMode.checked) {
+          accepting = false;
+          disableCells();
+          failCount += 1;
+          streakCount = 0;
+          revealAnswer(false);
+          updateMetrics();
+          setStatus(`<span class="bad">失敗。</span><br>正解は${expected + 1}番でした。次はパターンを「形」で覚える。`);
+        } else {
+          setStatus(`<span class="warn">違います。</span><br>次に踏むべき場所をもう一度選んでください。`);
+        }
+      }
+    }
+
+    function revealAnswer(countAsGiveUp = true) {
+      accepting = false;
+      disableCells();
+      cells.forEach((cell, i) => {
+        cell.classList.remove("next");
+        if (currentPattern[visualIndexToPatternIndex(i)] === "o") cell.classList.add("lit");
+      });
+      if (countAsGiveUp) {
+        failCount += 1;
+        streakCount = 0;
+        updateMetrics();
+        setStatus(`答え：<strong>${currentPattern}</strong><br>左から上→下。次の問題で取り返しましょう。`);
+      }
+    }
+
+    startBtn.addEventListener("click", startRound);
+
+    showAgainBtn.addEventListener("click", () => {
+      if (!currentPattern || !canShowAgain) return;
+      canShowAgain = false;
+      flashPattern();
+    });
+
+    revealBtn.addEventListener("click", () => {
+      if (!currentPattern) return;
+      revealAnswer(true);
+      revealBtn.disabled = true;
+      showAgainBtn.disabled = true;
+    });
+
+    buildBoard();
+    updateMetrics();
+  </script>
+</body>
+</html>
