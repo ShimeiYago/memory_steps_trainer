@@ -479,11 +479,15 @@
     }
 
     function generateRandomPattern() {
-      const litSet = new Set();
-      while (litSet.size < SAFE_CELLS) {
-        litSet.add(Math.floor(Math.random() * TOTAL_CELLS));
+      while (true) {
+        const litSet = new Set();
+        while (litSet.size < SAFE_CELLS) {
+          litSet.add(Math.floor(Math.random() * TOTAL_CELLS));
+        }
+
+        const pattern = Array.from({ length: TOTAL_CELLS }, (_, i) => litSet.has(i) ? "o" : "x").join("");
+        if (!pattern.includes("oooo")) return pattern;
       }
-      return Array.from({ length: TOTAL_CELLS }, (_, i) => litSet.has(i) ? "o" : "x").join("");
     }
 
     function startRound() {
