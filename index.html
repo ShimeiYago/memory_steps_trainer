@@ -322,9 +322,9 @@
   <main class="app">
     <section class="side left">
       <h1>MEMORY STEPS</h1>
-      <p class="sub">5個だけ1秒光ります。消えたあと、START側からGOAL側へ安全パネルを順に選んでください。</p>
+      <p class="sub">10個のうち5個だけ1秒光ります。消えたあと、START側からGOAL側へ安全パネルを順に選んでください。</p>
 
-      <div id="status" class="status">「START」を押すと、5パターンからランダムに1つ出題します。</div>
+      <div id="status" class="status">「START」を押すと、10個中5個の配置が毎回ランダムに出題されます。</div>
 
       <div class="controls">
         <button id="startBtn">START / 次の問題</button>
@@ -352,11 +352,7 @@
       </div>
 
       <div class="pattern-list" aria-label="known patterns">
-        <div>oxoxxooxxo</div>
-        <div>xooxxoxxoo</div>
-        <div>xooxxxooxo</div>
-        <div>xxoooxxxoo</div>
-        <div>oxxoxxooox</div>
+        <div>固定パターンは使わず、毎回ランダム生成</div>
       </div>
 
       <p class="tiny">
@@ -367,13 +363,8 @@
   </main>
 
   <script>
-    const patterns = [
-      "oxoxxooxxo",
-      "xooxxoxxoo",
-      "xooxxxooxo",
-      "xxoooxxxoo",
-      "oxxoxxooox"
-    ];
+    const TOTAL_CELLS = 10;
+    const SAFE_CELLS = 5;
 
     const board = document.getElementById("board");
     const statusEl = document.getElementById("status");
@@ -401,7 +392,7 @@
     function buildBoard() {
       board.innerHTML = "";
       cells = [];
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < TOTAL_CELLS; i++) {
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "cell disabled";
@@ -422,17 +413,17 @@
       clearCountEl.textContent = clearCount;
       failCountEl.textContent = failCount;
       streakCountEl.textContent = streakCount;
-      stepCountEl.textContent = `${Math.min(routeCursor, 5)}/5`;
+      stepCountEl.textContent = `${Math.min(routeCursor, SAFE_CELLS)}/${SAFE_CELLS}`;
     }
 
     function visualIndexToPatternIndex(visualIndex) {
       // 画面上は上がGOAL・下がSTART。
       // パターン文字列は左がSTART・右がGOALなので、上下を反転して対応させる。
-      return 9 - visualIndex;
+      return (TOTAL_CELLS - 1) - visualIndex;
     }
 
     function patternIndexToVisualIndex(patternIndex) {
-      return 9 - patternIndex;
+      return (TOTAL_CELLS - 1) - patternIndex;
     }
 
     function resetCells() {
@@ -487,8 +478,16 @@
       cells.forEach(cell => cell.classList.remove("next"));
     }
 
+    function generateRandomPattern() {
+      const litSet = new Set();
+      while (litSet.size < SAFE_CELLS) {
+        litSet.add(Math.floor(Math.random() * TOTAL_CELLS));
+      }
+      return Array.from({ length: TOTAL_CELLS }, (_, i) => litSet.has(i) ? "o" : "x").join("");
+    }
+
     function startRound() {
-      currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+      currentPattern = generateRandomPattern();
       safePatternPositionsStartToGoal = [...currentPattern].map((v, i) => v === "o" ? i : null).filter(v => v !== null);
       route = safePatternPositionsStartToGoal.map(patternIndexToVisualIndex); // START(left) -> GOAL(right), rendered bottom -> top
       routeCursor = 0;
